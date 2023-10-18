@@ -120,6 +120,13 @@ python run_multiclass_supervised.py --dataset TUEV --in_channels 18 --n_classes 
 
 ## 5. Citations
 ```bibtex
+@inproceedings{yang2023biot,
+    title={BIOT: Biosignal Transformer for Cross-data Learning in the Wild},
+    author={Yang, Chaoqi and Westover, M Brandon and Sun, Jimeng},
+    booktitle={Thirty-seventh Conference on Neural Information Processing Systems},
+    year={2023},
+    url={https://openreview.net/forum?id=c2LZyTyddi}
+}
 @article{yang2023biot,
   title={BIOT: Cross-data Biosignal Learning in the Wild},
   author={Yang, Chaoqi and Westover, M Brandon and Sun, Jimeng},
