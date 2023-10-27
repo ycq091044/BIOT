@@ -15,11 +15,10 @@ class PatchFrequencyEmbedding(nn.Module):
 
     def forward(self, x):
         """
-        x: (batch, 1, freq, time)
+        x: (batch, freq, time)
         out: (batch, time, emb_size)
         """
-        b, _, _, _ = x.shape
-        x = x.squeeze(1).permute(0, 2, 1)
+        x = x.permute(0, 2, 1)
         x = self.projection(x)
         return x
 
@@ -100,20 +99,15 @@ class BIOTEncoder(nn.Module):
         )
 
     def stft(self, sample):
-        signal = []
-        for s in range(sample.shape[1]):
-            spectral = torch.stft(
-                sample[:, s, :],
-                n_fft=self.n_fft,
-                hop_length=self.hop_length,
-                normalized=False,
-                center=False,
-                onesided=True,
-                return_complex=True,
-            )
-            signal.append(spectral)
-        stacked = torch.stack(signal).permute(1, 0, 2, 3)
-        return torch.abs(stacked)
+        spectral = torch.stft( 
+            input = sample.squeeze(1),
+            n_fft = self.n_fft,
+            hop_length = self.hop_length,
+            center = False,
+            onesided = True,
+            return_complex = True,
+        )
+        return torch.abs(spectral)
 
     def forward(self, x, n_channel_offset=0, perturb=False):
         """
