@@ -1,0 +1,6 @@
+torch
+numpy
+linear_attention_transformer
+einops
+pytorch_lightning
+tqdm
