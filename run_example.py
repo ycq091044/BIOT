@@ -28,7 +28,7 @@ BIOT-pretrain-SHHS+PREST - pre-trained BIOT model on 5M+5M EEG data
 BIOT-pretrain-dix-datasets - pre-trained BIOT model on all six EEG data
 """
 
-model_name = sys.argv[0]
+model_name = sys.argv[1]
 
 if model_name == "SPaRCNet":
     sparcnet = SPaRCNet(
