@@ -3,63 +3,11 @@ import os
 import numpy as np
 from tqdm import tqdm
 import multiprocessing as mp
-
-root = "/srv/local/data/physionet.org/files/chbmit/1.0.0/clean_signals"
-out = "/srv/local/data/physionet.org/files/chbmit/1.0.0/clean_segments"
-
-# root = 'clean_signals'
-# out = 'clean_segments'
-
-if not os.path.exists(out):
-    os.makedirs(out)
-
-# dump chb23 and chb24 to test, ch21 and ch22 to val, and the rest to train
-test_pats = ["chb23", "chb24"]
-val_pats = ["chb21", "chb22"]
-train_pats = [
-    "chb01",
-    "chb02",
-    "chb03",
-    "chb04",
-    "chb05",
-    "chb06",
-    "chb07",
-    "chb08",
-    "chb09",
-    "chb10",
-    "chb11",
-    "chb12",
-    "chb13",
-    "chb14",
-    "chb15",
-    "chb16",
-    "chb17",
-    "chb18",
-    "chb19",
-    "chb20",
-]
-channels = [
-    "FP1-F7",
-    "F7-T7",
-    "T7-P7",
-    "P7-O1",
-    "FP2-F8",
-    "F8-T8",
-    "T8-P8",
-    "P8-O2",
-    "FP1-F3",
-    "F3-C3",
-    "C3-P3",
-    "P3-O1",
-    "FP2-F4",
-    "F4-C4",
-    "C4-P4",
-    "P4-O2",
-]
-SAMPLING_RATE = 256
+import argparse
+import configparser
 
 
-def sub_to_segments(folder, out_folder):
+def sub_to_segments(folder, out_folder, root, channels, SAMPLING_RATE):
     print(f"Processing {folder}...")
     # each recording
     for f in tqdm(os.listdir(os.path.join(root, folder))):
@@ -148,22 +96,59 @@ def sub_to_segments(folder, out_folder):
                 )
 
 
-# parallel parameters
-folders = os.listdir(root)
-out_folders = []
-for folder in folders:
-    if folder in test_pats:
-        out_folder = os.path.join(out, "test")
-    elif folder in val_pats:
-        out_folder = os.path.join(out, "val")
-    else:
-        out_folder = os.path.join(out, "train")
+def parse_args():
+    parser = argparse.ArgumentParser(description="Process EDF files")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.ini",
+        help="Path to the configuration file",
+    )
+    return parser.parse_args()
 
-    if not os.path.exists(out_folder):
-        os.makedirs(out_folder)
 
-    out_folders.append(out_folder)
+def read_config(config_path):
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config
 
-# process in parallel
-with mp.Pool(mp.cpu_count()) as pool:
-    res = pool.starmap(sub_to_segments, zip(folders, out_folders))
+
+def main():
+    args = parse_args()
+    config = read_config(args.config)
+    root = config.get("Paths", "root")
+    out = config.get("Paths", "out")
+    test_pats = eval(config.get("Patients", "test_pats"))
+    val_pats = eval(config.get("Patients", "val_pats"))
+    channels = eval(config.get("Channels", "channels"))
+    SAMPLING_RATE = config.getint("SAMPLING_RATE", "rate")
+    if not os.path.exists(out):
+        os.makedirs(out)
+    folders = os.listdir(root)
+    out_folders = []
+    for folder in folders:
+        if folder in test_pats:
+            out_folder = os.path.join(out, "test")
+        elif folder in val_pats:
+            out_folder = os.path.join(out, "val")
+        else:
+            out_folder = os.path.join(out, "train")
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder)
+        out_folders.append(out_folder)
+    # process in parallel
+    with mp.Pool(mp.cpu_count()) as pool:
+        res = pool.starmap(
+            sub_to_segments,
+            zip(
+                folders,
+                out_folders,
+                [root] * len(folders),
+                [channels] * len(folders),
+                [SAMPLING_RATE] * len(folders),
+            ),
+        )
+
+
+if __name__ == "__main__":
+    main()

@@ -1,14 +1,14 @@
+import ast
 import os
+import argparse
+import configparser
+import multiprocessing as mp
 from collections import defaultdict
 import pyedflib
 import pyedflib.highlevel as hl
 import numpy as np
-import copy
-import shutil
-import bz2
 import pickle
 import _pickle as cPickle
-import multiprocessing as mp
 
 
 # Pickle a file and then compress it into a file with extension
@@ -101,7 +101,9 @@ def move_channels(clean_dict, channels, target):
 
 
 # Process edf files of a pacient from start number to end number
-def process_files(pacient, valid_channels, channels, start, end):
+def process_files(
+    pacient, valid_channels, channels, start, end, signals_path, clean_path
+):
     for num in range(start, end + 1):
         to_keep = []
 
@@ -162,7 +164,7 @@ def process_files(pacient, valid_channels, channels, start, end):
         move_channels(clean_dict, channels, target)
 
 
-def start_process(pacient, num, start, end, sum_ind):
+def start_process(pacient, num, start, end, sum_ind, signals_path, clean_path):
     # Summary file
     f = open(
         "{path}/chb{p}/chb{p}-summary.txt".format(path=signals_path, p=pacient), "r"
@@ -227,50 +229,66 @@ def start_process(pacient, num, start, end, sum_ind):
     compressed_pickle(target + ".pkl", clean_dict)
 
     # Process the rest of the files to get same channels as reference file
-    process_files(pacient, valid_channels, channels, start, end)
+    process_files(
+        pacient, valid_channels, channels, start, end, signals_path, clean_path
+    )
 
 
-# PARAMETERS
-signals_path = "/srv/local/data/physionet.org/files/chbmit/1.0.0"  # Path to the data main directory
-clean_path = "/srv/local/data/physionet.org/files/chbmit/1.0.0/clean_signals"  # Path where to store clean data
-
-if not os.path.exists(clean_path):
-    os.makedirs(clean_path)
-
-# Clean pacients one by one manually with these parameters
-pacient = "04"
-num = "01"  # Reference file
-summary_index = 0  # Index of channels summary reference
-start = 28  # Number of first file to process
-end = 28  # Number of last file to process
-# Start the process
-# start_process(pacient, num, start, end, summary_index)
+def parse_args():
+    parser = argparse.ArgumentParser(description="Process EDF files")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.ini",
+        help="Path to the configuration file",
+    )
+    return parser.parse_args()
 
 
-# FULL DATA PROCESS
-parameters = [
-    ("01", "01", 2, 46, 0),
-    ("02", "01", 2, 35, 0),
-    ("03", "01", 2, 38, 0),
-    ("05", "01", 2, 39, 0),
-    ("06", "01", 2, 24, 0),
-    ("07", "01", 2, 19, 0),
-    ("08", "02", 3, 29, 0),
-    ("10", "01", 2, 89, 0),
-    ("11", "01", 2, 99, 0),
-    ("14", "01", 2, 42, 0),
-    ("20", "01", 2, 68, 0),
-    ("21", "01", 2, 33, 0),
-    ("22", "01", 2, 77, 0),
-    ("23", "06", 7, 20, 0),
-    ("24", "01", 3, 21, 0),
-    ("04", "07", 1, 43, 1),
-    ("09", "02", 1, 19, 1),
-    ("15", "02", 1, 63, 1),
-    ("16", "01", 2, 19, 0),
-    ("18", "02", 1, 36, 1),
-    ("19", "02", 1, 30, 1),
-]
+def read_config(config_path):
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config
 
-with mp.Pool(mp.cpu_count()) as pool:
-    res = pool.starmap(start_process, parameters)
+
+def main(
+    parameters=[
+        ("01", "01", 2, 46, 0),
+        ("02", "01", 2, 35, 0),
+        ("03", "01", 2, 38, 0),
+        ("05", "01", 2, 39, 0),
+        ("06", "01", 2, 24, 0),
+        ("07", "01", 2, 19, 0),
+        ("08", "02", 3, 29, 0),
+        ("10", "01", 2, 89, 0),
+        ("11", "01", 2, 99, 0),
+        ("14", "01", 2, 42, 0),
+        ("20", "01", 2, 68, 0),
+        ("21", "01", 2, 33, 0),
+        ("22", "01", 2, 77, 0),
+        ("23", "06", 7, 20, 0),
+        ("24", "01", 3, 21, 0),
+        ("04", "07", 1, 43, 1),
+        ("09", "02", 1, 19, 1),
+        ("15", "02", 1, 63, 1),
+        ("16", "01", 2, 19, 0),
+        ("18", "02", 1, 36, 1),
+        ("19", "02", 1, 30, 1),
+    ]
+):
+    args = parse_args()
+    config = read_config(args.config)
+    signals_path = config.get("Paths", "signals_path")
+    clean_path = config.get("Paths", "clean_path")
+    if not os.path.exists(clean_path):
+        os.makedirs(clean_path)
+
+    parameters = [
+        (p[0], p[1], p[2], p[3], p[4], signals_path, clean_path) for p in parameters
+    ]
+    with mp.Pool(mp.cpu_count()) as pool:
+        res = pool.starmap(start_process, parameters)
+
+
+if __name__ == "__main__":
+    main()

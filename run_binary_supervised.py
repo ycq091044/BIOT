@@ -1,5 +1,6 @@
 import os
 import argparse
+import configparser
 import pickle
 
 import torch
@@ -170,7 +171,7 @@ def prepare_TUAB_dataloader(args):
     return train_loader, test_loader, val_loader
 
 
-def prepare_CHB_MIT_dataloader(args):
+def prepare_CHB_MIT_dataloader(args, config=None):
     # set random seed
     seed = 12345
     torch.manual_seed(seed)
@@ -178,7 +179,10 @@ def prepare_CHB_MIT_dataloader(args):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
-    root = "/srv/local/data/physionet.org/files/chbmit/1.0.0/clean_segments"
+    if config is None:
+        root = "/srv/local/data/physionet.org/files/chbmit/1.0.0/clean_segments"
+    else:
+        root = config.get("Paths", "root")
 
     train_files = os.listdir(os.path.join(root, "train"))
     val_files = os.listdir(os.path.join(root, "val"))
@@ -259,11 +263,22 @@ def prepare_PTB_dataloader(args):
     return train_loader, test_loader, val_loader
 
 
+def read_config(config_path):
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config
+
+
 def supervised(args):
+    # get config
+    config = read_config(args.config)
     # get data loaders
     if args.dataset == "TUAB":
         train_loader, test_loader, val_loader = prepare_TUAB_dataloader(args)
 
+    elif args.dataset == "CHB-MIT":
+        train_loader, test_loader, val_loader = prepare_CHB_MIT_dataloader(args, config)
+    
     else:
         raise NotImplementedError
 
@@ -406,6 +421,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--pretrain_model_path", type=str, default="", help="pretrained model path"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.ini",
+        help="Path to the configuration file",
     )
     args = parser.parse_args()
     print(args)

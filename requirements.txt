@@ -1,6 +1,9 @@
 torch
-numpy
+numpy==1.26.4
 linear_attention_transformer
 einops
-pytorch_lightning
+pytorch_lightning==1.9.5
 tqdm
+pyedflib==0.1.38
+pyhealth==1.1.6
+tensorboardX==2.6.2.2
